@@ -1,11 +1,12 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+// import { RouterOutlet } from '@angular/router';
 import { DatabaseService } from './core/database/database.service';
+import { IncidentTestComponent } from './features/incidents/pages/incident-test/incident-test.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet],
+  imports: [IncidentTestComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })

@@ -59,7 +59,7 @@ export const INCIDENT_QUERIES = {
      *
      * Parámetros:
      * [title, description, photoLocalPath, photoRemoteUrl,
-     *  latitude, longitude, temperatureC, updatedAt, id, userId]
+     *  latitude, longitude, temperatureC, updatedAt, id, userId, localRevision]
      */
     update: `
         UPDATE incidents
@@ -75,13 +75,14 @@ export const INCIDENT_QUERIES = {
             sync_status = 'pending'
         WHERE id = ?
         AND user_id = ?
-        AND deleted_at IS NULL;
+        AND deleted_at IS NULL
+        AND local_revision = ?;
     `,
 
     /**
      * Oculta el reporte y deja pendiente su eliminación remota.
      *
-     * Parámetros: [deletedAt, updatedAt, id, userId]
+     * Parámetros: [deletedAt, updatedAt, id, userId,localRevision]
      * Utilizar el mismo instante para deletedAt y updatedAt.
      */
     softDelete: `
@@ -92,7 +93,8 @@ export const INCIDENT_QUERIES = {
             sync_status = 'pending'
         WHERE id = ?
         AND user_id = ?
-        AND deleted_at IS NULL;
+        AND deleted_at IS NULL
+        AND local_revision = ?;
     `,
 
     /**

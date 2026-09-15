@@ -1,0 +1,214 @@
+<!-- Tarjeta principal con el resultado y las acciones de prueba. -->
+<mat-card appearance="outlined">
+    <mat-card-header>
+        <mat-card-title>Prueba local de incidentes</mat-card-title>
+        <mat-card-subtitle>Crear, consultar, editar y eliminar</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+        <p role="status">{{ message }}</p>
+
+        <!-- Indicador visible mientras se ejecuta una operación. -->
+        @if (busy) {
+            <div class="loading-overlay" role="status" aria-live="polite">
+                <div class="loading-panel">
+                <mat-spinner
+                    [diameter]="48"
+                    aria-label="Operación en curso"
+                ></mat-spinner>
+
+                <!-- Muestra el mensaje actual: obteniendo ubicación, guardando, etc. -->
+                <p>{{ message }}</p>
+                </div>
+            </div>
+        }
+
+        <!-- Los párrafos separan las acciones sin estilos personalizados. -->
+        <p>
+            <button type="button" mat-flat-button (click)="startCreate()" [disabled]="busy || formVisible">
+                Crear reporte
+            </button>
+        </p>
+
+        <p>
+            <button mat-stroked-button (click)="load()" [disabled]="busy">
+                Consultar reportes
+            </button>
+        </p>
+
+        <p>
+            <button type="button" mat-stroked-button (click)="startEdit()"
+                [disabled]="busy || formVisible || !reportSelected">
+                Editar seleccionado
+            </button>
+        </p>
+
+        <p>
+            <button mat-stroked-button (click)="remove()" [disabled]="busy || !reportSelected">
+                Eliminar seleccionado
+            </button>
+        </p>
+
+        <p>
+            <button mat-button (click)="checkOtherUser()" [disabled]="busy || !reportSelected">
+                Probar acceso de otro usuario
+            </button>
+        </p>
+
+        <!-- Un mismo formulario sirve para crear y editar. -->
+        @if (formVisible) {
+            <mat-card appearance="outlined">
+                <mat-card-header>
+                    <mat-card-title>
+                        {{ editingReport ? 'Editar reporte' : 'Nuevo reporte' }}
+                    </mat-card-title>
+                </mat-card-header>
+
+                <mat-card-content>
+                    <form class="incident-form" [formGroup]="form" (ngSubmit)="save()">
+                        <mat-form-field appearance="outline">
+                            <mat-label>Título</mat-label>
+
+                            <input matInput formControlName="title" maxlength="100"
+                                placeholder="Ejemplo: árbol caído en la vía" />
+
+                            <mat-hint align="end">
+                                {{ form.controls.title.value.length }}/100
+                            </mat-hint>
+
+                            @if (
+                            form.controls.title.hasError('required') ||
+                            form.controls.title.hasError('pattern')
+                            ) {
+                            <mat-error>Escribe un título válido.</mat-error>
+                            }
+
+                            @if (form.controls.title.hasError('maxlength')) {
+                            <mat-error>El máximo es de 100 caracteres.</mat-error>
+                            }
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline">
+                            <mat-label>Descripción</mat-label>
+
+                            <textarea matInput formControlName="description" rows="4"
+                                placeholder="Describe lo que ocurrió"></textarea>
+
+                            <mat-hint>Opcional</mat-hint>
+                        </mat-form-field>
+
+                        <!-- Aclaración exclusiva de esta pantalla de diagnóstico. -->
+                        <p class="test-note">
+                            Al crear el reporte se obtiene la ubicación del dispositivo.
+                        </p>
+
+                        <!-- type="button" evita que abrir la cámara envíe el formulario. -->
+                        <section class="photo-section">
+                            <button mat-stroked-button type="button" (click)="takePhoto()" [disabled]="busy">
+                                {{ photoPreviewUrl ? 'Tomar otra foto' : 'Tomar fotografía' }}
+                            </button>
+
+                            @if (photoPreviewUrl) {
+                                <img class="photo-preview" [src]="photoPreviewUrl" alt="Fotografía del incidente" />
+                            } @else {
+                                <p>Agrega una fotografía del incidente.</p>
+                            }
+                        </section>
+
+                        <div class="form-actions">
+                            <button mat-flat-button type="submit" [disabled]="busy">
+                                {{ editingReport ? 'Guardar cambios' : 'Guardar reporte' }}
+                            </button>
+
+                            <button mat-button type="button" (click)="cancelForm()" [disabled]="busy">
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </mat-card-content>
+            </mat-card>
+        }
+    </mat-card-content>
+</mat-card>
+
+<!-- Listado de reportes activos. -->
+<mat-card appearance="outlined">
+    <mat-card-header>
+        <mat-card-title>Activos: {{ reports.length }}</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+        @for (report of reports; track report.id) {
+        <p>
+            <button mat-stroked-button (click)="select(report)" [disabled]="busy"
+                [attr.aria-pressed]="reportSelected?.id === report.id">
+                {{ report.title }}
+                @if (reportSelected?.id === report.id) {
+                    — Seleccionado
+                }
+            </button>
+        </p>
+        } @empty {
+        <p>No hay reportes activos cargados.</p>
+        }
+    </mat-card-content>
+</mat-card>
+
+<!-- Datos necesarios para comprobar la creación y la edición. -->
+<mat-card appearance="outlined">
+    <mat-card-header>
+        <mat-card-title>Reporte seleccionado</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+        @if (reportSelected; as report) {
+            <p><strong>Título:</strong> {{ report.title }}</p>
+            <p><strong>Descripción:</strong> {{ report.description }}</p>
+            <p><strong>Estado:</strong> {{ report.syncStatus }}</p>
+            <p><strong>Revisión:</strong> {{ report.localRevision }}</p>
+            <p>
+                <strong>Actualizado:</strong>
+                {{ report.updatedAt | date:'dd/MM/yyyy HH:mm:ss' }}
+            </p>
+            <p>
+                <strong>Ubicación:</strong>
+                {{ report.latitude }}, {{ report.longitude }}
+            </p>
+            } @else {
+            <p>Crea o selecciona un reporte.</p>
+        }
+    </mat-card-content>
+</mat-card>
+
+<!-- Incluye eliminaciones lógicas pendientes de sincronizar. -->
+<mat-card appearance="outlined">
+    <mat-card-header>
+        <mat-card-title>Pendientes: {{ pending.length }}</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+        <mat-accordion>
+            @for (report of pending; track report.id) {
+            <mat-expansion-panel>
+                <mat-expansion-panel-header>
+                    <mat-panel-title>{{ report.title }}</mat-panel-title>
+                </mat-expansion-panel-header>
+
+                <p><strong>Estado:</strong> {{ report.syncStatus }}</p>
+                <p><strong>Revisión:</strong> {{ report.localRevision }}</p>
+
+                @if (report.deletedAt !== null) {
+                    <p>
+                        <strong>Eliminado:</strong>
+                        {{ report.deletedAt | date:'dd/MM/yyyy HH:mm:ss' }}
+                    </p>
+                } @else {
+                    <p>Reporte activo, sin fecha de eliminación.</p>
+                }
+            </mat-expansion-panel>
+            } @empty {
+            <p>No hay pendientes cargados.</p>
+            }
+        </mat-accordion>
+    </mat-card-content>
+</mat-card>
